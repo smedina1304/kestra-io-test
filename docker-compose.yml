@@ -17,17 +17,17 @@ services:
       retries: 10
 
   dind:
-    image: docker:dind-rootless
+    image: docker:dind
     privileged: true
-    user: "1000"
-    environment:
-      DOCKER_HOST: unix://dind/docker.sock
+    # user: "1000"
+    # environment:
+    #   DOCKER_HOST: unix://dind/docker.sock
     command:
       - --log-level=fatal
-      - --group=1000
-    volumes:
-      - ./_kestra/dind-socket:/dind
-      - ./_kestra/tmp/kestra-wd:/tmp/kestra-wd
+      # - --group=1000
+    # volumes:
+    #   - ./_kestra/dind-socket:/dind
+    #   - ./_kestra/tmp/kestra-wd:/tmp/kestra-wd
 
   kestra:
     image: kestra/kestra:latest-full
