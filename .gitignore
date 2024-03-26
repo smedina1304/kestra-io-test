@@ -1,0 +1,12 @@
+# Local Data
+_kestra/
+_postgres/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
