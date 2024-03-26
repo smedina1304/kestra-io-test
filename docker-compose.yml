@@ -17,9 +17,9 @@ services:
       retries: 10
 
   dind:
-    image: docker:dind
+    image: docker:dind-rootless
     privileged: true
-    # user: "1000"
+    user: "1000"
     environment:
       DOCKER_HOST: unix://dind/docker.sock
     command:
