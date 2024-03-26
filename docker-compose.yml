@@ -1,3 +1,4 @@
+# Docker in Docker (DinD) on a Mac
 services:
   postgres:
     image: postgres
@@ -15,12 +16,27 @@ services:
       timeout: 10s
       retries: 10
 
+  dind:
+    image: docker:dind
+    privileged: true
+    # user: "1000"
+    environment:
+      DOCKER_HOST: unix://dind/docker.sock
+    command:
+      - --log-level=fatal
+      # - --group=1000
+    volumes:
+      - ./_kestra/dind-socket:/dind
+      - ./_kestra/tmp/kestra-wd:/tmp/kestra-wd
+
   kestra:
     image: kestra/kestra:latest-full
     pull_policy: always
     # Note that this is meant for development only. Refer to the documentation for production deployments of Kestra which runs without a root user.
     user: "root"
-    command: server standalone --worker-thread=128
+    command:
+      - -c
+      - /app/kestra server standalone --worker-thread=128
     volumes:
       - ./_kestra/app/storage:/app/storage
       - ./_kestra/var/run/docker.sock:/var/run/docker.sock
@@ -56,4 +72,6 @@ services:
       - "8081:8081"
     depends_on:
       postgres:
+        condition: service_started
+      dind:
         condition: service_started
