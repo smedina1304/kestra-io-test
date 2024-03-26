@@ -24,7 +24,7 @@ services:
       DOCKER_HOST: unix://dind/docker.sock
     command:
       - --log-level=fatal
-      # - --group=1000
+      - --group=1000
     volumes:
       - ./_kestra/dind-socket:/dind
       - ./_kestra/tmp/kestra-wd:/tmp/kestra-wd
@@ -34,9 +34,7 @@ services:
     pull_policy: always
     # Note that this is meant for development only. Refer to the documentation for production deployments of Kestra which runs without a root user.
     user: "root"
-    command:
-      - -c
-      - /app/kestra server standalone --worker-thread=128
+    command: server standalone --worker-thread=128
     volumes:
       - ./_kestra/app/storage:/app/storage
       - ./_kestra/var/run/docker.sock:/var/run/docker.sock
