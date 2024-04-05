@@ -1,0 +1,24 @@
+id: example_14_webhook
+namespace: company.team
+
+description: |
+  Example flow for a webhook trigger.
+  To start this flow, just send a curl request:
+  ```bash
+  curl http://localhost:8080/api/v1/executions/webhook/io.kestra.demo.flows/webhook/1KERKzRQZSMtLdMdNI7Nkr
+       http://192.168.0.222:8080/api/v1/executions/webhook/company.team/example_14_webhook/1KERKzRQZSMtLdMdNI7Nkr
+       https://{your_hostname}/api/v1/executions/webhook/{namespace}/{flowId}/{key}
+  ```
+  This endpoint doesn't need any login / password and is secured by `key` that is different for every flow
+
+tasks:
+  - id: out
+    type: io.kestra.core.tasks.debugs.Return
+    format: "{{ trigger | json }}"
+
+
+triggers:
+  - id: webhook
+    type: io.kestra.core.models.triggers.types.Webhook
+    # the required key to start this flow - might be passed as a secret
+    key: 1KERKzRQZSMtLdMdNI7Nkr

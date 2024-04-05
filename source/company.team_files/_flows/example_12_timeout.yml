@@ -1,0 +1,17 @@
+id: example_12_timeout
+namespace: company.team
+
+description: This flow will always fail because of a timeout.
+
+tasks:
+- id: failed
+  type: io.kestra.plugin.scripts.shell.Commands
+  runner: PROCESS
+  commands:
+    - sleep 10
+  timeout: PT5S
+
+errors:
+  - id: happen
+    type: io.kestra.core.tasks.debugs.Return
+    format: This flow has failed

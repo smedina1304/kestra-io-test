@@ -1,0 +1,23 @@
+id: example_03_disable_task
+namespace: company.team
+
+description: |
+  This flow will never launch the `skipped` task because that task is disabled.
+  Also note how the log level of each task is different. This is useful to limit which logs should be stored in the database (repository).
+
+tasks:
+  - id: first
+    type: io.kestra.core.tasks.debugs.Return
+    format: first {{task.id}}
+    logLevel: TRACE
+
+  - id: skipped
+    type: io.kestra.core.tasks.debugs.Return
+    disabled: true
+    format: second {{task.type}}
+    logLevel: WARN
+
+  - id: last
+    type: io.kestra.core.tasks.debugs.Return
+    format: the name of the flow is {{flow.id}}
+    logLevel: ERROR

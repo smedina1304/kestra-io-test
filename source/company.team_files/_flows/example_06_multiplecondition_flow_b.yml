@@ -1,0 +1,6 @@
+id: example_06_multiplecondition-flow-b
+namespace: company.team
+tasks:
+  - id: multiplecondition-flow-b
+    type: io.kestra.core.tasks.log.Log
+    message: Execution -> multiplecondition-flow-b
