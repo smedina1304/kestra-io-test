@@ -1,0 +1,127 @@
+id: dag-hackernews-report
+namespace: sm.dags.hackernews
+description: Metrics of top stories from - API - https://github.com/HackerNews/API#new-top-and-best-stories.
+
+tasks:
+  - id: download-files
+    type: io.kestra.core.tasks.flows.Parallel
+    
+    tasks:
+      - id: stopwords
+        type: io.kestra.core.tasks.flows.Sequential
+
+        tasks:
+        - id: get_stopwords_zip
+          type: io.kestra.plugin.fs.http.Download
+          uri: "https://docs.dagster.io/assets/stopwords.zip"
+
+        - id: unzip_stopwords
+          type: io.kestra.plugin.compress.ArchiveDecompress
+          algorithm: ZIP
+          from: "{{ outputs.get_stopwords_zip.uri }}"
+
+        - id: local_stopwords_list
+          type: io.kestra.plugin.scripts.python.Script
+          warningOnStdErr: false
+          docker:
+            image: ghcr.io/kestra-io/pydata:latest
+          script: |
+            import io
+            import pandas as pd
+
+            # Local stopwords list
+            stopwords = {"ai", "the", "an", "of", "to", "in", 
+                        "for", "and", "with", "on", "is", "yc",
+                        "s23", "x", "far", "this", "than", "it",
+                        "a", "hn", "why", "new", "show", "that",
+                        "as", "you", "too", "tool", "pdf"}
+
+            filecvs = open("{{outputs.unzip_stopwords.files['stopwords.csv']}}",'rb')
+            for line in filecvs.readlines():
+              word = line.decode('utf-8').rstrip('\n')
+              stopwords.add(word)
+
+            df = pd.DataFrame(list(stopwords), columns = ['words'])
+            df.to_csv('{{outputDir}}/stopwords.csv', index=False)
+
+      - id: topstories
+        type: io.kestra.core.tasks.flows.Sequential
+
+        tasks:
+          - id: get_topstories_ids
+            type: io.kestra.plugin.fs.http.Download
+            uri: "https://hacker-news.firebaseio.com/v0/topstories.json"
+
+          - id: read_topstories_json
+            type: io.kestra.plugin.scripts.python.Script
+            warningOnStdErr: false
+            docker:
+              image: ghcr.io/kestra-io/pydata:latest
+            script: |
+              import io
+              import json
+              import requests
+              import pandas as pd
+
+              filejson = open("{{ outputs.get_topstories_ids.uri }}")
+
+              top_new_story_ids = json.load(filejson)[:100]
+
+              # For each ID in the list, get the data in the news
+              results = []
+              for item_id in top_new_story_ids:
+                  item = requests.get(
+                      f"https://hacker-news.firebaseio.com/v0/item/{item_id}.json"
+                  ).json()
+                  results.append(item)
+
+                  if len(results) % 20 == 0:
+                      print(f"Got {len(results)} items so far.")         
+
+              # Return the DataFrame of the Top Stories
+              df = pd.DataFrame(results)
+              df.to_csv('{{outputDir}}/topstories.csv', index=False)
+
+
+  - id: reports
+    type: io.kestra.core.tasks.flows.Parallel
+    
+    tasks:
+
+      - id: most_frequent_words
+        type: io.kestra.plugin.scripts.python.Script
+        inputFiles:
+          topstories.csv: "{{ outputs.read_topstories_json.outputFiles['topstories.csv'] }}"
+          stopwords.csv: "{{ outputs.local_stopwords_list.outputFiles['stopwords.csv'] }}"
+        description: This script reads the files `topstories.csv` and `stopwords.csv`
+                     to count the most frequently used words in the news
+        docker:
+          image: ghcr.io/kestra-io/pydata:latest
+        warningOnStdErr: false
+        script: "{{ read('scripts/most_frequent_words.py') }}"
+        outputFiles:
+          - "most_frequent_words.csv"
+
+      - id: top_publishers
+        type: io.kestra.plugin.scripts.python.Script
+        inputFiles:
+          topstories.csv: "{{ outputs.read_topstories_json.outputFiles['topstories.csv'] }}"
+        description: This script reads the `topstories.csv` file and counts posts to check the top publishers
+        docker:
+          image: ghcr.io/kestra-io/pydata:latest
+        warningOnStdErr: false
+        script: "{{ read('scripts/top_publishers.py') }}"
+        outputFiles:
+          - "top_publishers.csv"
+
+      - id: top_scores
+        type: io.kestra.plugin.scripts.python.Script
+        inputFiles:
+          topstories.csv: "{{ outputs.read_topstories_json.outputFiles['topstories.csv'] }}"
+        description: This script reads the `topstories.csv` file and select the top 10 scores
+        docker:
+          image: ghcr.io/kestra-io/pydata:latest
+        warningOnStdErr: false
+        script: "{{ read('scripts/top_scores.py') }}"
+        outputFiles:
+          - "top_scores.csv"     
